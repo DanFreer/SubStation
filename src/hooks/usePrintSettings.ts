@@ -18,7 +18,7 @@ export interface PrintSettings {
   pageNumbers: boolean
 }
 
-const DEFAULT: PrintSettings = {
+export const DEFAULT_PRINT: PrintSettings = {
   margins: { top: 0, right: 0, bottom: 0, left: 0 },
   overlap: 0.25,
   unit: 'in',
@@ -43,8 +43,10 @@ function convertMargins(
   }
 }
 
-export function usePrintSettings() {
-  const [settings, setSettings] = useState<PrintSettings>(DEFAULT)
+export function usePrintSettings(initial?: PrintSettings | null) {
+  const [settings, setSettings] = useState<PrintSettings>(
+    initial ?? DEFAULT_PRINT,
+  )
 
   const setUniformMargin = useCallback((value: number) => {
     setSettings((prev) => ({

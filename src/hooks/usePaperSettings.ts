@@ -8,7 +8,7 @@ import type {
 import { getPaperPreset } from '../utils/paperPresets'
 import { convertLength, fromInches, roundDisplay } from '../utils/units'
 
-const DEFAULT: PaperSettings = {
+export const DEFAULT_PAPER: PaperSettings = {
   presetId: 'letter',
   width: 8.5,
   height: 11,
@@ -30,8 +30,8 @@ function dimsForPreset(
   return { width: roundDisplay(w), height: roundDisplay(h) }
 }
 
-export function usePaperSettings() {
-  const [settings, setSettings] = useState<PaperSettings>(DEFAULT)
+export function usePaperSettings(initial?: PaperSettings | null) {
+  const [settings, setSettings] = useState<PaperSettings>(initial ?? DEFAULT_PAPER)
 
   const setPreset = useCallback((presetId: PaperPresetId) => {
     setSettings((prev) => {

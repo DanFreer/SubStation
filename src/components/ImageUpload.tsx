@@ -5,11 +5,18 @@ import type { UploadedImage } from '../types'
 interface ImageUploadProps {
   image: UploadedImage | null
   error: string | null
+  warning?: string | null
   onFile: (file: File) => void
   onClear: () => void
 }
 
-export function ImageUpload({ image, error, onFile, onClear }: ImageUploadProps) {
+export function ImageUpload({
+  image,
+  error,
+  warning = null,
+  onFile,
+  onClear,
+}: ImageUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
 
@@ -109,6 +116,9 @@ export function ImageUpload({ image, error, onFile, onClear }: ImageUploadProps)
       </div>
 
       {error && <p className="text-xs text-red-600">{error}</p>}
+      {warning && !error && (
+        <p className="text-xs text-amber-700">{warning}</p>
+      )}
 
       <input
         ref={inputRef}
