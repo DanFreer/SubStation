@@ -35,7 +35,7 @@ export function AppShell() {
           <h1 className="text-lg font-semibold text-[var(--text)]">SubStation</h1>
         </div>
         <p className="hidden text-xs text-[var(--muted)] sm:block">
-          Stage 3 · preview
+          Stage 4 · PDF export
         </p>
       </header>
 
@@ -74,6 +74,7 @@ export function AppShell() {
             onUnit={print.setUnit}
             onMirror={print.setMirror}
             onOrientationPreference={print.setOrientationPreference}
+            onMark={print.setMark}
           />
         </aside>
 
@@ -82,7 +83,7 @@ export function AppShell() {
         </main>
 
         <aside className="min-h-0 overflow-y-auto rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
-          <SummaryPanel model={model} />
+          <SummaryPanel model={model} printSettings={print.settings} />
         </aside>
       </div>
     </div>

@@ -14,6 +14,10 @@ interface PrintSettingsPanelProps {
   onUnit: (unit: LengthUnit) => void
   onMirror: (mirror: boolean) => void
   onOrientationPreference: (value: OrientationPreference) => void
+  onMark: (
+    key: 'cropMarks' | 'registrationMarks' | 'tileLabels' | 'pageNumbers',
+    value: boolean,
+  ) => void
 }
 
 const UNITS: LengthUnit[] = ['in', 'cm', 'mm']
@@ -28,6 +32,7 @@ export function PrintSettingsPanel({
   onUnit,
   onMirror,
   onOrientationPreference,
+  onMark,
 }: PrintSettingsPanelProps) {
   const uniform =
     settings.margins.top === settings.margins.right &&
@@ -158,6 +163,30 @@ export function PrintSettingsPanel({
         Default ON. Mirrors the full finished piece before tiling; preview shows
         the mirrored state.
       </p>
+
+      <div className="space-y-1.5 border-t border-[var(--border)] pt-3">
+        <p className="text-xs text-[var(--muted)]">PDF marks (outside art)</p>
+        {(
+          [
+            ['cropMarks', 'Crop marks'],
+            ['registrationMarks', 'Registration marks'],
+            ['tileLabels', 'Tile labels'],
+            ['pageNumbers', 'Page numbers'],
+          ] as const
+        ).map(([key, label]) => (
+          <label
+            key={key}
+            className="flex items-center justify-between gap-2 text-xs text-[var(--text)]"
+          >
+            {label}
+            <input
+              type="checkbox"
+              checked={settings[key]}
+              onChange={(e) => onMark(key, e.target.checked)}
+            />
+          </label>
+        ))}
+      </div>
     </section>
   )
 }
