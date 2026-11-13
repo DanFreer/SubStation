@@ -1,10 +1,13 @@
 import { useArtworkSettings } from '../hooks/useArtworkSettings'
 import { useImageUpload } from '../hooks/useImageUpload'
 import { usePaperSettings } from '../hooks/usePaperSettings'
+import { usePreviewModel } from '../hooks/usePreviewModel'
+import { usePrintSettings } from '../hooks/usePrintSettings'
 import { ArtworkSettingsPanel } from './ArtworkSettingsPanel'
 import { ImageUpload } from './ImageUpload'
 import { PaperSettingsPanel } from './PaperSettingsPanel'
 import { PreviewPanel } from './PreviewPanel'
+import { PrintSettingsPanel } from './PrintSettingsPanel'
 import { SummaryPanel } from './SummaryPanel'
 
 export function AppShell() {
@@ -13,6 +16,14 @@ export function AppShell() {
     image && image.heightPx > 0 ? image.widthPx / image.heightPx : null
   const artwork = useArtworkSettings(pixelAspect)
   const paper = usePaperSettings()
+  const print = usePrintSettings()
+
+  const model = usePreviewModel({
+    image,
+    artwork: artwork.settings,
+    paper: paper.settings,
+    print: print.settings,
+  })
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -24,7 +35,7 @@ export function AppShell() {
           <h1 className="text-lg font-semibold text-[var(--text)]">SubStation</h1>
         </div>
         <p className="hidden text-xs text-[var(--muted)] sm:block">
-          Stage 2 · print engine
+          Stage 3 · preview
         </p>
       </header>
 
@@ -55,18 +66,23 @@ export function AppShell() {
             onWidth={paper.setWidth}
             onHeight={paper.setHeight}
           />
+          <PrintSettingsPanel
+            settings={print.settings}
+            onUniformMargin={print.setUniformMargin}
+            onMargin={print.setMargin}
+            onOverlap={print.setOverlap}
+            onUnit={print.setUnit}
+            onMirror={print.setMirror}
+            onOrientationPreference={print.setOrientationPreference}
+          />
         </aside>
 
         <main className="min-h-[320px] min-w-0">
-          <PreviewPanel image={image} artwork={artwork.settings} />
+          <PreviewPanel model={model} />
         </main>
 
         <aside className="min-h-0 overflow-y-auto rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
-          <SummaryPanel
-            image={image}
-            artwork={artwork.settings}
-            paper={paper.settings}
-          />
+          <SummaryPanel model={model} />
         </aside>
       </div>
     </div>
