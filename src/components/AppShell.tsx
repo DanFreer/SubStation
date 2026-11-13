@@ -159,20 +159,35 @@ export function AppShell() {
       </div>
 
       {/* Phone / small tablet: one panel + bottom tabs */}
-      <div className="flex min-h-0 flex-1 flex-col lg:hidden">
-        <div className="min-h-0 flex-1 overflow-y-auto p-3 pb-2">
+      <div className="relative z-0 flex min-h-0 flex-1 flex-col lg:hidden">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 pb-2">
           {mobileTab === 'controls' && (
-            <aside className="flex flex-col gap-6 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
+            <aside
+              id="panel-controls"
+              role="tabpanel"
+              aria-labelledby="tab-controls"
+              className="flex flex-col gap-6 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4"
+            >
               {controlsPanel}
             </aside>
           )}
           {mobileTab === 'preview' && (
-            <main className="flex h-full min-h-[min(70dvh,28rem)] flex-col">
+            <main
+              id="panel-preview"
+              role="tabpanel"
+              aria-labelledby="tab-preview"
+              className="flex h-full min-h-[min(60dvh,24rem)] flex-col"
+            >
               <PreviewPanel model={model} />
             </main>
           )}
           {mobileTab === 'export' && (
-            <aside className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
+            <aside
+              id="panel-export"
+              role="tabpanel"
+              aria-labelledby="tab-export"
+              className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4"
+            >
               <SummaryPanel
                 model={model}
                 printSettings={print.settings}
@@ -183,26 +198,34 @@ export function AppShell() {
         </div>
 
         <nav
-          className="shrink-0 border-t border-[var(--border)] bg-[var(--surface)] px-2 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+          className="relative z-20 shrink-0 border-t border-[var(--border)] bg-[var(--surface)] px-2 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_-4px_12px_rgba(15,23,42,0.06)]"
           aria-label="Studio panels"
         >
-          <div className="mx-auto grid max-w-md grid-cols-3 gap-1">
+          <div
+            role="tablist"
+            aria-orientation="horizontal"
+            className="mx-auto grid max-w-md grid-cols-3 gap-1"
+          >
             {MOBILE_TABS.map(({ id, label, icon: Icon }) => {
               const active = mobileTab === id
               return (
                 <button
                   key={id}
+                  id={`tab-${id}`}
                   type="button"
+                  role="tab"
+                  aria-selected={active}
+                  aria-controls={`panel-${id}`}
+                  tabIndex={active ? 0 : -1}
                   onClick={() => setMobileTab(id)}
-                  aria-current={active ? 'page' : undefined}
                   className={`flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-md px-2 py-1.5 text-[11px] font-medium transition-colors ${
                     active
-                      ? 'bg-[var(--accent-soft)] text-[var(--accent)]'
-                      : 'text-[var(--muted)] active:bg-[var(--bg)]'
+                      ? 'bg-[var(--accent-soft)] text-[var(--accent)] ring-1 ring-[var(--accent)]/30'
+                      : 'text-[var(--muted)] hover:bg-[var(--bg)] active:bg-[var(--bg)]'
                   }`}
                 >
-                  <Icon className="h-5 w-5" aria-hidden />
-                  {label}
+                  <Icon className="pointer-events-none h-5 w-5" aria-hidden />
+                  <span className="pointer-events-none">{label}</span>
                 </button>
               )
             })}
