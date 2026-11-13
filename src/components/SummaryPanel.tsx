@@ -185,7 +185,7 @@ export function SummaryPanel({
           type="button"
           disabled={!canExport || busy}
           onClick={() => void runExport('download')}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-[var(--accent)] px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-[var(--accent)] px-3 py-2.5 text-sm font-medium text-white disabled:opacity-50"
         >
           <FileDown className="h-4 w-4" />
           {busy ? 'Building PDF…' : 'Download PDF'}
@@ -194,7 +194,7 @@ export function SummaryPanel({
           type="button"
           disabled={!canExport || busy}
           onClick={() => void runExport('print')}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-[var(--border)] bg-white px-3 py-2 text-sm font-medium text-[var(--text)] disabled:opacity-50"
+          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md border border-[var(--border)] bg-white px-3 py-2.5 text-sm font-medium text-[var(--text)] disabled:opacity-50"
         >
           <Printer className="h-4 w-4" />
           Print PDF

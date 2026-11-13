@@ -37,6 +37,7 @@ VITE_BASE_PATH=/SubStation/ npm run build
 - DPI bands and validation warnings
 - Multi-page PDF download/print with optional marks/labels
 - Preferences persist in `localStorage` (sizes, paper, overlap, mirror, marks)
+- **Responsive shell:** desktop three-column layout; below `lg`, tabbed **Controls / Preview / Export**
 
 ## GitHub Pages — enable once (manual)
 
