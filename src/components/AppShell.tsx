@@ -5,6 +5,7 @@ import { useImageUpload } from '../hooks/useImageUpload'
 import { usePaperSettings } from '../hooks/usePaperSettings'
 import { usePreviewModel } from '../hooks/usePreviewModel'
 import { usePrintSettings } from '../hooks/usePrintSettings'
+import { useSeamOverrides } from '../hooks/useSeamOverrides'
 import { loadPreferences, savePreferences } from '../utils/storage'
 import { validateAll } from '../utils/validation'
 import { ArtworkSettingsPanel } from './ArtworkSettingsPanel'
@@ -35,13 +36,30 @@ export function AppShell() {
   const artwork = useArtworkSettings(pixelAspect, savedPrefs?.artwork ?? null)
   const paper = usePaperSettings(savedPrefs?.paper ?? null)
   const print = usePrintSettings(savedPrefs?.print ?? null)
+  const seams = useSeamOverrides()
 
   const model = usePreviewModel({
     image,
     artwork: artwork.settings,
     paper: paper.settings,
     print: print.settings,
+    seams: seams.overrides,
   })
+
+  const layout = model.tileResult?.ok ? model.tileResult.layout : null
+  const pruneSeams = seams.pruneAgainstLayout
+
+  useEffect(() => {
+    pruneSeams(layout)
+  }, [
+    layout?.cols,
+    layout?.rows,
+    layout?.usable.width,
+    layout?.usable.height,
+    layout?.overlap,
+    pruneSeams,
+    layout,
+  ])
 
   const issues = useMemo(
     () =>
@@ -81,11 +99,18 @@ export function AppShell() {
       />
       <ArtworkSettingsPanel
         settings={artwork.settings}
+        imageUrl={image?.objectUrl ?? null}
+        imageWidthPx={image?.widthPx ?? 0}
+        imageHeightPx={image?.heightPx ?? 0}
         onWidth={artwork.setWidth}
         onHeight={artwork.setHeight}
         onUnit={artwork.setUnit}
         onLockAspect={artwork.setLockAspect}
         onFitMode={artwork.setFitMode}
+        onPreset={artwork.setPreset}
+        onCropRect={artwork.setCropRect}
+        onCropLockToMedia={artwork.setCropLockToMedia}
+        onResetCrop={artwork.resetCrop}
         onPortrait={artwork.applyPortrait}
         onLandscape={artwork.applyLandscape}
         onReset={artwork.reset}
@@ -119,8 +144,8 @@ export function AppShell() {
         </div>
       )}
       <p className="text-[10px] text-[var(--muted)]">
-        Preferences (sizes, paper, overlap, mirror, marks) save in this browser
-        only. Uploaded images are never stored.
+        Preferences (finished media, transfer material, overlap, mirror, marks)
+        save in this browser only. Uploaded images are never stored.
       </p>
     </>
   )
@@ -135,7 +160,7 @@ export function AppShell() {
           <h1 className="text-lg font-semibold text-[var(--text)]">SubStation</h1>
         </div>
         <p className="hidden text-xs text-[var(--muted)] sm:block">
-          Stage 6 · mobile
+          Stage 7 · three-layer
         </p>
       </header>
 
@@ -146,7 +171,7 @@ export function AppShell() {
         </aside>
 
         <main className="min-h-[320px] min-w-0">
-          <PreviewPanel model={model} />
+          <PreviewPanel model={model} seams={seams} />
         </main>
 
         <aside className="min-h-0 overflow-y-auto rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
@@ -178,7 +203,7 @@ export function AppShell() {
               aria-labelledby="tab-preview"
               className="flex h-full min-h-[min(60dvh,24rem)] flex-col"
             >
-              <PreviewPanel model={model} />
+              <PreviewPanel model={model} seams={seams} />
             </main>
           )}
           {mobileTab === 'export' && (

@@ -1,6 +1,6 @@
 # SubStation
 
-Browser-only **Sublimation Print Studio**: upload artwork, set finished size and paper, tile with overlap, preview geometry, and export a multi-page PDF. No backend. Hosted as a static SPA on **GitHub Pages**.
+Browser-only **Sublimation Print Studio**: upload artwork, set finished media size + crop, choose transfer material, tile with overlap/seams, preview geometry, and export a multi-page PDF. No backend. Hosted as a static SPA on **GitHub Pages**.
 
 **Live (after Pages is enabled):** https://danfreer.github.io/SubStation/
 
@@ -32,11 +32,14 @@ VITE_BASE_PATH=/SubStation/ npm run build
 ## Features
 
 - Upload PNG/JPG/WebP (local only; never written to localStorage)
-- Artwork size, paper presets, margins, overlap, mirror (default ON)
+- **Three-layer workflow:** Artwork → Finished media (size + crop) → Transfer material (sheet presets/margins/overlap/mirror)
+- Finished-media presets; drag/resize crop on source; FIT/FILL/STRETCH inside crop
+- Draggable seam overrides on full preview (overlap centered); same geometry for PDF
 - Tile preview (full + per-page) driven by the same print engine as PDF
+- Summary shows PDF page size = transfer material (inches × 72 pt); Actual Size reminder
 - DPI bands and validation warnings
 - Multi-page PDF download/print with optional marks/labels
-- Preferences persist in `localStorage` (sizes, paper, overlap, mirror, marks)
+- Preferences persist in `localStorage` (sizes, transfer, overlap, mirror, marks, crop)
 - **Responsive shell:** desktop three-column layout; below `lg`, tabbed **Controls / Preview / Export**
 
 ## GitHub Pages — enable once (manual)

@@ -4,20 +4,24 @@ import {
   FlipHorizontal2,
   Layers,
   Maximize2,
+  RotateCcw,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import type { usePreviewModel } from '../hooks/usePreviewModel'
+import type { useSeamOverrides } from '../hooks/useSeamOverrides'
 import { FullArtworkPreview } from './FullArtworkPreview'
 import { PagePreview } from './PagePreview'
 
 type PreviewMode = 'full' | 'page'
 
 type PreviewModel = ReturnType<typeof usePreviewModel>
+type SeamControls = ReturnType<typeof useSeamOverrides>
 
 interface PreviewPanelProps {
   model: PreviewModel
+  seams?: SeamControls
 }
 
 function fitScale(
@@ -30,7 +34,7 @@ function fitScale(
   return Math.max(8, Math.min(viewW / contentW, viewH / contentH) * 0.92)
 }
 
-export function PreviewPanel({ model }: PreviewPanelProps) {
+export function PreviewPanel({ model, seams }: PreviewPanelProps) {
   const [mode, setMode] = useState<PreviewMode>('full')
   const [pageIndex, setPageIndex] = useState(0)
   const [zoom, setZoom] = useState(1)
@@ -121,6 +125,18 @@ export function PreviewPanel({ model }: PreviewPanelProps) {
           </div>
         )}
 
+        {mode === 'full' && seams && layout && (
+          <button
+            type="button"
+            onClick={() => seams.resetSeams()}
+            className="inline-flex min-h-9 items-center gap-1 rounded border border-[var(--border)] px-2 py-1 text-[10px] text-[var(--muted)]"
+            title="Reset seams to auto"
+          >
+            <RotateCcw className="h-3 w-3" />
+            Auto seams
+          </button>
+        )}
+
         <div className="ml-auto flex items-center gap-1">
           {model.mirror && (
             <span className="inline-flex items-center gap-1 rounded bg-[var(--accent-soft)] px-2 py-0.5 text-[10px] font-medium text-[var(--accent)]">
@@ -161,7 +177,7 @@ export function PreviewPanel({ model }: PreviewPanelProps) {
           <div className="flex flex-col items-center gap-2 text-[var(--muted)]">
             <Layers className="h-10 w-10 opacity-40" />
             <p className="text-sm">
-              {status ?? 'Set artwork and paper sizes to preview tiles'}
+              {status ?? 'Set finished media and transfer material to preview tiles'}
             </p>
           </div>
         ) : mode === 'full' ? (
@@ -171,6 +187,27 @@ export function PreviewPanel({ model }: PreviewPanelProps) {
             mirror={model.mirror}
             scale={scale}
             highlightPageIndex={null}
+            showSeamControls={Boolean(seams)}
+            onVerticalSeam={
+              seams
+                ? (index, pos) => seams.setVerticalSeam(layout, index, pos)
+                : undefined
+            }
+            onHorizontalSeam={
+              seams
+                ? (index, pos) => seams.setHorizontalSeam(layout, index, pos)
+                : undefined
+            }
+            onNudgeVertical={
+              seams
+                ? (index, dir) => seams.nudgeVertical(layout, index, dir)
+                : undefined
+            }
+            onNudgeHorizontal={
+              seams
+                ? (index, dir) => seams.nudgeHorizontal(layout, index, dir)
+                : undefined
+            }
           />
         ) : tile ? (
           <PagePreview
@@ -187,7 +224,8 @@ export function PreviewPanel({ model }: PreviewPanelProps) {
 
       <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--border)] px-3 py-2 text-[10px] text-[var(--muted)]">
         <span>
-          {model.artW.toFixed(2)}×{model.artH.toFixed(2)} in · overlap{' '}
+          Finished {model.artW.toFixed(2)}×{model.artH.toFixed(2)} in · transfer{' '}
+          {model.paperW.toFixed(2)}×{model.paperH.toFixed(2)} in · overlap{' '}
           {model.overlap.toFixed(3)} in
           {layout
             ? ` · ${layout.pageCount} sheet${layout.pageCount === 1 ? '' : 's'} (${layout.cols}×${layout.rows}) · ${layout.orientation}`

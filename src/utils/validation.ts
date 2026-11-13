@@ -10,17 +10,17 @@ export interface ValidationIssue {
 export function validateArtwork(settings: ArtworkSettings): ValidationIssue[] {
   const issues: ValidationIssue[] = []
   if (!Number.isFinite(settings.width) || settings.width <= 0) {
-    issues.push({ field: 'artwork.width', message: 'Artwork width must be greater than 0' })
+    issues.push({ field: 'artwork.width', message: 'Finished media width must be greater than 0' })
   }
   if (!Number.isFinite(settings.height) || settings.height <= 0) {
-    issues.push({ field: 'artwork.height', message: 'Artwork height must be greater than 0' })
+    issues.push({ field: 'artwork.height', message: 'Finished media height must be greater than 0' })
   }
   const wIn = toInches(settings.width, settings.unit)
   const hIn = toInches(settings.height, settings.unit)
   if (wIn > 200 || hIn > 200) {
     issues.push({
       field: 'artwork.size',
-      message: 'Artwork size is unusually large (>200 in); check units',
+      message: 'Finished media size is unusually large (>200 in); check units',
     })
   }
   return issues
@@ -29,10 +29,10 @@ export function validateArtwork(settings: ArtworkSettings): ValidationIssue[] {
 export function validatePaper(settings: PaperSettings): ValidationIssue[] {
   const issues: ValidationIssue[] = []
   if (!Number.isFinite(settings.width) || settings.width <= 0) {
-    issues.push({ field: 'paper.width', message: 'Paper width must be greater than 0' })
+    issues.push({ field: 'paper.width', message: 'Transfer material width must be greater than 0' })
   }
   if (!Number.isFinite(settings.height) || settings.height <= 0) {
-    issues.push({ field: 'paper.height', message: 'Paper height must be greater than 0' })
+    issues.push({ field: 'paper.height', message: 'Transfer material height must be greater than 0' })
   }
   return issues
 }
@@ -69,20 +69,20 @@ export function validatePrint(
   if (usableW <= 0 || usableH <= 0) {
     issues.push({
       field: 'margins',
-      message: 'Margins leave no printable area on the selected paper',
+      message: 'Margins leave no printable area on the selected transfer material',
     })
   }
   const overlapIn = toInches(print.overlap, print.unit)
   if (usableW > 0 && overlapIn >= usableW) {
     issues.push({
       field: 'overlap',
-      message: 'Overlap must be smaller than usable paper width',
+      message: 'Overlap must be smaller than usable transfer width',
     })
   }
   if (usableH > 0 && overlapIn >= usableH) {
     issues.push({
       field: 'overlap',
-      message: 'Overlap must be smaller than usable paper height',
+      message: 'Overlap must be smaller than usable transfer height',
     })
   }
   return issues

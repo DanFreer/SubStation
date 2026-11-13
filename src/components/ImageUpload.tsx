@@ -39,9 +39,12 @@ export function ImageUpload({
   return (
     <section className="space-y-3">
       <header className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold tracking-wide text-[var(--text)]">
-          Upload
-        </h2>
+        <div>
+          <h2 className="text-sm font-semibold tracking-wide text-[var(--text)]">
+            Artwork
+          </h2>
+          <p className="text-[10px] text-[var(--muted)]">Upload source image</p>
+        </div>
         {image && (
           <button
             type="button"

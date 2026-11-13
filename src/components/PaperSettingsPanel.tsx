@@ -24,8 +24,11 @@ export function PaperSettingsPanel({
     <section className="space-y-3">
       <header>
         <h2 className="text-sm font-semibold tracking-wide text-[var(--text)]">
-          Paper
+          Transfer material
         </h2>
+        <p className="text-[10px] text-[var(--muted)]">
+          Printable sheet size (Letter / A4 / custom)
+        </p>
       </header>
 
       <label className="block space-y-1 text-xs text-[var(--muted)]">

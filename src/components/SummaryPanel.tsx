@@ -52,6 +52,11 @@ export function SummaryPanel({
 
   const canExport = Boolean(layout && image && !validationBlocking)
 
+  const pdfW = layout ? layout.paper.width : model.paperW
+  const pdfH = layout ? layout.paper.height : model.paperH
+  const pdfPtW = pdfW * 72
+  const pdfPtH = pdfH * 72
+
   const runExport = async (mode: 'download' | 'print') => {
     if (validationBlocking) {
       setError('Fix validation issues before exporting.')
@@ -78,6 +83,8 @@ export function SummaryPanel({
         imageBytes,
         imageMime: image.mimeType || image.file.type || 'image/png',
         paperPresetId: paper.presetId,
+        crop: model.crop,
+        fitMode: model.fitMode,
       })
 
       if (mode === 'download') {
@@ -109,20 +116,39 @@ export function SummaryPanel({
         <div className="flex justify-between gap-2">
           <dt className="text-[var(--muted)]">Artwork</dt>
           <dd className="text-right text-[var(--text)]">
+            {image
+              ? `${image.widthPx}×${image.heightPx} px`
+              : '—'}
+          </dd>
+        </div>
+        <div className="flex justify-between gap-2">
+          <dt className="text-[var(--muted)]">Finished media</dt>
+          <dd className="text-right text-[var(--text)]">
             {artwork.width} × {artwork.height} {artwork.unit}
           </dd>
         </div>
         <div className="flex justify-between gap-2">
-          <dt className="text-[var(--muted)]">Paper</dt>
+          <dt className="text-[var(--muted)]">Transfer material</dt>
           <dd className="text-right capitalize text-[var(--text)]">
             {paper.presetId} · {paper.orientation}
           </dd>
         </div>
         <div className="flex justify-between gap-2">
-          <dt className="text-[var(--muted)]">Paper size</dt>
+          <dt className="text-[var(--muted)]">Transfer size</dt>
           <dd className="text-right text-[var(--text)]">
             {paper.width} × {paper.height} {paper.unit}
           </dd>
+        </div>
+        <div className="flex justify-between gap-2">
+          <dt className="text-[var(--muted)]">PDF page size</dt>
+          <dd className="text-right text-[var(--text)]">
+            {pdfW > 0
+              ? `${pdfW.toFixed(2)}×${pdfH.toFixed(2)} in (${pdfPtW.toFixed(0)}×${pdfPtH.toFixed(0)} pt)`
+              : '—'}
+          </dd>
+        </div>
+        <div className="rounded-md bg-[var(--bg)] px-2 py-1.5 text-[10px] text-[var(--muted)]">
+          PDF page = transfer material. Print at <strong className="text-[var(--text)]">Actual Size / 100%</strong> — do not use Fit to Page.
         </div>
         <div className="flex justify-between gap-2">
           <dt className="text-[var(--muted)]">Mirror</dt>
@@ -175,6 +201,14 @@ export function SummaryPanel({
           <dd className="text-right text-[var(--text)]">
             {layout
               ? `${layout.usable.width.toFixed(2)}×${layout.usable.height.toFixed(2)} in`
+              : '—'}
+          </dd>
+        </div>
+        <div className="flex justify-between gap-2">
+          <dt className="text-[var(--muted)]">Layout finished size</dt>
+          <dd className="text-right text-[var(--text)]">
+            {layout
+              ? `${layout.artwork.width.toFixed(2)}×${layout.artwork.height.toFixed(2)} in`
               : '—'}
           </dd>
         </div>
