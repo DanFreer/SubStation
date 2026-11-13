@@ -43,11 +43,15 @@ VITE_BASE_PATH=/SubStation/ npm run build
 The deploy workflow (`.github/workflows/deploy-pages.yml`) builds with base path **`/SubStation/`** and publishes `dist/` on every push to `main`. You still need to turn Pages on in the repo settings (API cannot do this without admin UI confirmation):
 
 1. Open **https://github.com/DanFreer/SubStation/settings/pages**
-2. Under **Build and deployment → Source**, choose **GitHub Actions**
+2. Under **Build and deployment → Source**, choose **GitHub Actions** (not “Deploy from a branch”)
 3. Save if prompted
 4. Ensure Actions are allowed for the repo (**Settings → Actions → General** → allow Actions)
 5. Push to `main` (or re-run the **Deploy GitHub Pages** workflow under the Actions tab)
 6. Wait for the workflow to finish, then open **https://danfreer.github.io/SubStation/**
+
+### If the site loads but is a blank white screen
+
+That means Pages is publishing the **repo source** (`index.html` → `/src/main.tsx`) instead of the Vite **`dist/`** build. Browsers cannot run the TypeScript entry (wrong path + `application/octet-stream` MIME). Fix: set Source to **GitHub Actions**, then re-run **Deploy GitHub Pages**. Do not use “Deploy from a branch” on `main`.
 
 ### Base path
 
