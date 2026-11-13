@@ -24,7 +24,7 @@ export function AppShell() {
           <h1 className="text-lg font-semibold text-[var(--text)]">SubStation</h1>
         </div>
         <p className="hidden text-xs text-[var(--muted)] sm:block">
-          Stage 1 · foundation
+          Stage 2 · print engine
         </p>
       </header>
 
