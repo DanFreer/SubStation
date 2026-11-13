@@ -12,6 +12,10 @@ export interface PrintSettings {
   unit: LengthUnit
   mirror: boolean
   orientationPreference: OrientationPreference
+  cropMarks: boolean
+  registrationMarks: boolean
+  tileLabels: boolean
+  pageNumbers: boolean
 }
 
 const DEFAULT: PrintSettings = {
@@ -20,6 +24,10 @@ const DEFAULT: PrintSettings = {
   unit: 'in',
   mirror: true,
   orientationPreference: 'auto',
+  cropMarks: true,
+  registrationMarks: true,
+  tileLabels: true,
+  pageNumbers: true,
 }
 
 function convertMargins(
@@ -79,6 +87,16 @@ export function usePrintSettings() {
     [],
   )
 
+  const setMark = useCallback(
+    (
+      key: 'cropMarks' | 'registrationMarks' | 'tileLabels' | 'pageNumbers',
+      value: boolean,
+    ) => {
+      setSettings((prev) => ({ ...prev, [key]: value }))
+    },
+    [],
+  )
+
   return {
     settings,
     setUniformMargin,
@@ -87,5 +105,6 @@ export function usePrintSettings() {
     setUnit,
     setMirror,
     setOrientationPreference,
+    setMark,
   }
 }

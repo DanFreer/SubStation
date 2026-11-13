@@ -22,7 +22,18 @@ export {
   sourceXForMirroredArt,
 } from './imageProcessor'
 export type { MirrorAxis } from './imageProcessor'
-export { pdfGeneratorStub } from './pdfGenerator'
+export {
+  PRINT_ACTUAL_SIZE_INSTRUCTIONS,
+  buildPdfFilename,
+  generatePdf,
+  paperSizePoints,
+  topLeftInchesToPdf,
+} from './pdfGenerator'
+export type {
+  GeneratePdfInput,
+  GeneratePdfResult,
+  PdfMarkOptions,
+} from './pdfGenerator'
 export {
   DPI_BANDS,
   calculateResolution,
