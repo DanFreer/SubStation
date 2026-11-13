@@ -12,6 +12,7 @@ type PreviewModel = ReturnType<typeof usePreviewModel>
 interface SummaryPanelProps {
   model: PreviewModel
   printSettings: PrintSettings
+  validationBlocking?: boolean
 }
 
 const TONE_CLASS = {
@@ -37,7 +38,11 @@ function downloadBytes(bytes: Uint8Array, filename: string) {
   URL.revokeObjectURL(url)
 }
 
-export function SummaryPanel({ model, printSettings }: SummaryPanelProps) {
+export function SummaryPanel({
+  model,
+  printSettings,
+  validationBlocking = false,
+}: SummaryPanelProps) {
   const { artwork, paper, tileResult, resolution, mirror, overlap, margins, image } =
     model
   const layout = tileResult?.ok ? tileResult.layout : null
@@ -45,9 +50,13 @@ export function SummaryPanel({ model, printSettings }: SummaryPanelProps) {
   const [error, setError] = useState<string | null>(null)
   const [showPrintHelp, setShowPrintHelp] = useState(false)
 
-  const canExport = Boolean(layout && image)
+  const canExport = Boolean(layout && image && !validationBlocking)
 
   const runExport = async (mode: 'download' | 'print') => {
+    if (validationBlocking) {
+      setError('Fix validation issues before exporting.')
+      return
+    }
     if (!layout || !image) {
       setError('Upload an image and set valid sizes before exporting.')
       return

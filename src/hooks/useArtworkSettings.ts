@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react'
 import type { ArtworkSettings, FitMode, LengthUnit } from '../types'
 import { convertLength, roundDisplay } from '../utils/units'
 
-const DEFAULT: ArtworkSettings = {
+export const DEFAULT_ARTWORK: ArtworkSettings = {
   width: 14,
   height: 17,
   unit: 'in',
@@ -10,8 +10,13 @@ const DEFAULT: ArtworkSettings = {
   fitMode: 'FIT',
 }
 
-export function useArtworkSettings(pixelAspect?: number | null) {
-  const [settings, setSettings] = useState<ArtworkSettings>(DEFAULT)
+export function useArtworkSettings(
+  pixelAspect?: number | null,
+  initial?: ArtworkSettings | null,
+) {
+  const [settings, setSettings] = useState<ArtworkSettings>(
+    initial ?? DEFAULT_ARTWORK,
+  )
 
   const aspect =
     pixelAspect && pixelAspect > 0
@@ -83,7 +88,7 @@ export function useArtworkSettings(pixelAspect?: number | null) {
   }, [])
 
   const reset = useCallback(() => {
-    setSettings(DEFAULT)
+    setSettings(DEFAULT_ARTWORK)
   }, [])
 
   return {
