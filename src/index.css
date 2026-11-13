@@ -18,6 +18,8 @@ html,
 body,
 #root {
   height: 100%;
+  /* Prefer dynamic viewport on mobile browsers (URL bar show/hide). */
+  height: 100dvh;
 }
 
 body {
@@ -29,6 +31,8 @@ body {
     sans-serif;
   color: var(--text);
   background: var(--bg);
+  /* Avoid accidental horizontal scroll from full-bleed panels. */
+  overflow-x: hidden;
 }
 
 button,

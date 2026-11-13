@@ -99,7 +99,7 @@ export function PreviewPanel({ model }: PreviewPanelProps) {
               type="button"
               disabled={pageIndex <= 0}
               onClick={() => setPageIndex((i) => Math.max(0, i - 1))}
-              className="rounded border border-[var(--border)] p-1 disabled:opacity-40"
+              className="min-h-9 min-w-9 rounded border border-[var(--border)] p-1.5 disabled:opacity-40"
               aria-label="Previous page"
             >
               <ChevronLeft className="h-3.5 w-3.5" />
@@ -113,7 +113,7 @@ export function PreviewPanel({ model }: PreviewPanelProps) {
               onClick={() =>
                 setPageIndex((i) => Math.min(pageCount - 1, i + 1))
               }
-              className="rounded border border-[var(--border)] p-1 disabled:opacity-40"
+              className="min-h-9 min-w-9 rounded border border-[var(--border)] p-1.5 disabled:opacity-40"
               aria-label="Next page"
             >
               <ChevronRight className="h-3.5 w-3.5" />
@@ -131,7 +131,7 @@ export function PreviewPanel({ model }: PreviewPanelProps) {
           <button
             type="button"
             onClick={() => setZoom((z) => Math.max(0.25, +(z - 0.25).toFixed(2)))}
-            className="rounded border border-[var(--border)] p-1 text-[var(--muted)]"
+            className="min-h-9 min-w-9 rounded border border-[var(--border)] p-1.5 text-[var(--muted)]"
             aria-label="Zoom out"
           >
             <ZoomOut className="h-3.5 w-3.5" />
@@ -139,7 +139,7 @@ export function PreviewPanel({ model }: PreviewPanelProps) {
           <button
             type="button"
             onClick={() => setZoom(1)}
-            className="rounded border border-[var(--border)] px-2 py-1 text-[10px] text-[var(--muted)]"
+            className="min-h-9 rounded border border-[var(--border)] px-2 py-1.5 text-[10px] text-[var(--muted)]"
             title="Fit"
           >
             <Maximize2 className="mr-1 inline h-3 w-3" />
@@ -148,7 +148,7 @@ export function PreviewPanel({ model }: PreviewPanelProps) {
           <button
             type="button"
             onClick={() => setZoom((z) => Math.min(4, +(z + 0.25).toFixed(2)))}
-            className="rounded border border-[var(--border)] p-1 text-[var(--muted)]"
+            className="min-h-9 min-w-9 rounded border border-[var(--border)] p-1.5 text-[var(--muted)]"
             aria-label="Zoom in"
           >
             <ZoomIn className="h-3.5 w-3.5" />
