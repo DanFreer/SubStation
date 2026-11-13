@@ -1,38 +1,23 @@
 import { FileDown } from 'lucide-react'
-import { calculateTiles, zeroMargins } from '../engine'
-import type { ArtworkSettings, PaperSettings, UploadedImage } from '../types'
-import { toInches } from '../utils/units'
+import type { usePreviewModel } from '../hooks/usePreviewModel'
+
+type PreviewModel = ReturnType<typeof usePreviewModel>
 
 interface SummaryPanelProps {
-  image: UploadedImage | null
-  artwork: ArtworkSettings
-  paper: PaperSettings
+  model: PreviewModel
 }
 
-/** Stage 2 defaults until Stage 5 prefs / tiling controls land. */
-const DEFAULT_OVERLAP_IN = 0.25
+const TONE_CLASS = {
+  danger: 'text-red-600',
+  warn: 'text-amber-600',
+  info: 'text-sky-700',
+  ok: 'text-emerald-700',
+} as const
 
-export function SummaryPanel({ image, artwork, paper }: SummaryPanelProps) {
-  const artW = toInches(artwork.width, artwork.unit)
-  const artH = toInches(artwork.height, artwork.unit)
-  const paperW = toInches(paper.width, paper.unit)
-  const paperH = toInches(paper.height, paper.unit)
-
-  const dpi =
-    image && artW > 0 && artH > 0
-      ? Math.min(image.widthPx / artW, image.heightPx / artH)
-      : null
-
-  const tileResult =
-    artW > 0 && artH > 0 && paperW > 0 && paperH > 0
-      ? calculateTiles({
-          artwork: { width: artW, height: artH },
-          paper: { width: paperW, height: paperH },
-          margins: zeroMargins(),
-          overlap: DEFAULT_OVERLAP_IN,
-          orientation: 'auto',
-        })
-      : null
+export function SummaryPanel({ model }: SummaryPanelProps) {
+  const { artwork, paper, tileResult, resolution, mirror, overlap, margins } =
+    model
+  const layout = tileResult?.ok ? tileResult.layout : null
 
   return (
     <section className="space-y-4">
@@ -62,32 +47,57 @@ export function SummaryPanel({ image, artwork, paper }: SummaryPanelProps) {
           </dd>
         </div>
         <div className="flex justify-between gap-2">
-          <dt className="text-[var(--muted)]">Approx. DPI</dt>
+          <dt className="text-[var(--muted)]">Mirror</dt>
+          <dd className="text-right text-[var(--text)]">{mirror ? 'ON' : 'OFF'}</dd>
+        </div>
+        <div className="flex justify-between gap-2">
+          <dt className="text-[var(--muted)]">Overlap</dt>
           <dd className="text-right text-[var(--text)]">
-            {dpi != null ? Math.round(dpi) : '—'}
+            {overlap.toFixed(3)} in
           </dd>
         </div>
+        <div className="flex justify-between gap-2">
+          <dt className="text-[var(--muted)]">Margins</dt>
+          <dd className="text-right text-[var(--text)]">
+            {margins.top.toFixed(2)}/{margins.right.toFixed(2)}/
+            {margins.bottom.toFixed(2)}/{margins.left.toFixed(2)} in
+          </dd>
+        </div>
+        <div className="flex justify-between gap-2">
+          <dt className="text-[var(--muted)]">Effective DPI</dt>
+          <dd className="text-right text-[var(--text)]">
+            {resolution?.ok ? Math.round(resolution.result.dpi) : '—'}
+          </dd>
+        </div>
+        {resolution?.ok && (
+          <div className="rounded-md bg-[var(--bg)] px-2 py-1.5">
+            <p className={`font-medium ${TONE_CLASS[resolution.result.band.tone]}`}>
+              {resolution.result.band.label}
+            </p>
+            <p className="mt-0.5 text-[10px] text-[var(--muted)]">
+              {resolution.result.band.message}
+            </p>
+          </div>
+        )}
         <div className="flex justify-between gap-2">
           <dt className="text-[var(--muted)]">Sheets</dt>
           <dd className="text-right text-[var(--text)]">
-            {tileResult?.ok
-              ? `${tileResult.layout.pageCount} (${tileResult.layout.cols}×${tileResult.layout.rows})`
-              : '—'}
+            {layout
+              ? `${layout.pageCount} (${layout.cols}×${layout.rows}) · ${layout.orientation}`
+              : tileResult && tileResult.ok === false
+                ? 'Error'
+                : '—'}
           </dd>
         </div>
+        {tileResult && tileResult.ok === false && (
+          <p className="text-[10px] text-red-600">{tileResult.error}</p>
+        )}
         <div className="flex justify-between gap-2">
           <dt className="text-[var(--muted)]">Printable</dt>
           <dd className="text-right text-[var(--text)]">
-            {tileResult?.ok
-              ? `${tileResult.layout.usable.width.toFixed(2)}×${tileResult.layout.usable.height.toFixed(2)} in`
+            {layout
+              ? `${layout.usable.width.toFixed(2)}×${layout.usable.height.toFixed(2)} in`
               : '—'}
-          </dd>
-        </div>
-        <div className="flex justify-between gap-2 text-[10px] text-[var(--muted)]">
-          <dt>Internal (in)</dt>
-          <dd>
-            art {artW.toFixed(2)}×{artH.toFixed(2)} · paper {paperW.toFixed(2)}×
-            {paperH.toFixed(2)}
           </dd>
         </div>
       </dl>
@@ -102,8 +112,8 @@ export function SummaryPanel({ image, artwork, paper }: SummaryPanelProps) {
         Download PDF
       </button>
       <p className="text-xs text-[var(--muted)]">
-        Sheet count from Stage 2 engine (0 margins, {DEFAULT_OVERLAP_IN}&quot; overlap,
-        auto orientation). Preview overlays and PDF come next.
+        Geometry from Stage 2 engine; preview mirrors before tiling. PDF in
+        Stage 4.
       </p>
     </section>
   )
