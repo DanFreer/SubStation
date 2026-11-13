@@ -1,3 +1,15 @@
+export type {
+  MarginsInches,
+  OrientationPreference,
+  SizeInches,
+  TileCalculationInput,
+  TileCalculationResult,
+  TileLayout,
+  TileRect,
+  UsableArea,
+} from './geometry'
+export type { PaperOrientation as GeometryPaperOrientation } from './geometry'
+
 export type LengthUnit = 'in' | 'cm' | 'mm'
 
 export type FitMode = 'FIT' | 'FILL' | 'STRETCH'

@@ -1,4 +1,5 @@
 import { FileDown } from 'lucide-react'
+import { calculateTiles, zeroMargins } from '../engine'
 import type { ArtworkSettings, PaperSettings, UploadedImage } from '../types'
 import { toInches } from '../utils/units'
 
@@ -7,6 +8,9 @@ interface SummaryPanelProps {
   artwork: ArtworkSettings
   paper: PaperSettings
 }
+
+/** Stage 2 defaults until Stage 5 prefs / tiling controls land. */
+const DEFAULT_OVERLAP_IN = 0.25
 
 export function SummaryPanel({ image, artwork, paper }: SummaryPanelProps) {
   const artW = toInches(artwork.width, artwork.unit)
@@ -17,6 +21,17 @@ export function SummaryPanel({ image, artwork, paper }: SummaryPanelProps) {
   const dpi =
     image && artW > 0 && artH > 0
       ? Math.min(image.widthPx / artW, image.heightPx / artH)
+      : null
+
+  const tileResult =
+    artW > 0 && artH > 0 && paperW > 0 && paperH > 0
+      ? calculateTiles({
+          artwork: { width: artW, height: artH },
+          paper: { width: paperW, height: paperH },
+          margins: zeroMargins(),
+          overlap: DEFAULT_OVERLAP_IN,
+          orientation: 'auto',
+        })
       : null
 
   return (
@@ -54,7 +69,19 @@ export function SummaryPanel({ image, artwork, paper }: SummaryPanelProps) {
         </div>
         <div className="flex justify-between gap-2">
           <dt className="text-[var(--muted)]">Sheets</dt>
-          <dd className="text-right text-[var(--text)]">Stage 2</dd>
+          <dd className="text-right text-[var(--text)]">
+            {tileResult?.ok
+              ? `${tileResult.layout.pageCount} (${tileResult.layout.cols}×${tileResult.layout.rows})`
+              : '—'}
+          </dd>
+        </div>
+        <div className="flex justify-between gap-2">
+          <dt className="text-[var(--muted)]">Printable</dt>
+          <dd className="text-right text-[var(--text)]">
+            {tileResult?.ok
+              ? `${tileResult.layout.usable.width.toFixed(2)}×${tileResult.layout.usable.height.toFixed(2)} in`
+              : '—'}
+          </dd>
         </div>
         <div className="flex justify-between gap-2 text-[10px] text-[var(--muted)]">
           <dt>Internal (in)</dt>
@@ -75,7 +102,8 @@ export function SummaryPanel({ image, artwork, paper }: SummaryPanelProps) {
         Download PDF
       </button>
       <p className="text-xs text-[var(--muted)]">
-        Tiling, DPI bands, and PDF export ship in Stages 2–4.
+        Sheet count from Stage 2 engine (0 margins, {DEFAULT_OVERLAP_IN}&quot; overlap,
+        auto orientation). Preview overlays and PDF come next.
       </p>
     </section>
   )
