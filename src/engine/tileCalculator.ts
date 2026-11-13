@@ -1,6 +1,7 @@
 import type {
   OrientationPreference,
   PaperOrientation,
+  SeamOverrides,
   SizeInches,
   TileCalculationInput,
   TileCalculationResult,
@@ -16,6 +17,9 @@ import {
   tilesNeededAlongAxis,
 } from './printGeometry'
 
+/** Default minimum tile content (inches) when clamping seam overrides. */
+export const DEFAULT_MIN_TILE_SIZE = 0.5
+
 function tileLabel(col: number, row: number): string {
   // A1, B1, … Z1, AA1, …
   let n = col
@@ -27,23 +31,127 @@ function tileLabel(col: number, row: number): string {
   return `${colLabel}${row + 1}`
 }
 
-function buildTiles(
+/**
+ * Auto seam centers for N tiles: overlap centered on each seam.
+ * Seam i (1-based among gaps) sits at i×step + overlap/2.
+ */
+export function autoSeamCenters(
+  tileCount: number,
+  usable: number,
+  overlap: number,
+): number[] {
+  if (tileCount <= 1) return []
+  const step = usable - overlap
+  const seams: number[] = []
+  for (let i = 1; i < tileCount; i += 1) {
+    seams.push(i * step + overlap / 2)
+  }
+  return seams
+}
+
+/**
+ * Clamp / snap seam centers so each tile keeps minTileSize of unique content,
+ * stays ordered, and never exceeds usable (avoids gaps when overlap is centered).
+ */
+export function clampSeamCenters(
+  seams: number[],
+  artworkLength: number,
+  overlap: number,
+  minTileSize: number,
+  usable?: number,
+): number[] {
+  const n = seams.length
+  if (n === 0) return []
+
+  const half = overlap / 2
+  const minGap = Math.max(minTileSize, GEOMETRY_EPS)
+  const stepMax =
+    usable !== undefined && Number.isFinite(usable)
+      ? Math.max(GEOMETRY_EPS, usable - overlap)
+      : Number.POSITIVE_INFINITY
+
+  // First seam: first tile width S+O/2 ≤ usable ⇒ S ≤ usable − O/2
+  // Last seam: last tile width art−(S−O/2) ≤ usable ⇒ S ≥ art − usable + O/2
+  const coverLo =
+    usable !== undefined && Number.isFinite(usable)
+      ? artworkLength - usable + half
+      : half + minTileSize
+  const coverHi =
+    usable !== undefined && Number.isFinite(usable)
+      ? usable - half
+      : artworkLength - half - minTileSize
+
+  const lo = Math.max(half + minTileSize, coverLo)
+  const hi = Math.min(artworkLength - half - minTileSize, coverHi)
+
+  if (hi + GEOMETRY_EPS < lo && n === 1) {
+    // Artwork too constrained — pin to auto-ish center of allowed band
+    return [(lo + hi) / 2]
+  }
+
+  const sorted = [...seams].map((s) => (Number.isFinite(s) ? s : lo))
+  sorted.sort((a, b) => a - b)
+
+  const out: number[] = []
+  for (let i = 0; i < n; i += 1) {
+    let s = sorted[i]!
+    const minA = i === 0 ? lo : out[i - 1]! + minGap
+    const maxFromPrev = i === 0 ? hi : out[i - 1]! + stepMax
+    const maxAllowed = Math.min(hi - (n - 1 - i) * minGap, maxFromPrev)
+    if (maxAllowed + GEOMETRY_EPS < minA) {
+      s = (minA + maxAllowed) / 2
+    } else {
+      s = Math.min(Math.max(s, minA), maxAllowed)
+    }
+    out.push(s)
+  }
+  return out
+}
+
+function axisStarts(seams: number[], overlap: number): number[] {
+  const half = overlap / 2
+  return [0, ...seams.map((s) => s - half)]
+}
+
+function axisEnd(
+  seams: number[],
+  index: number,
+  artworkLength: number,
+  overlap: number,
+): number {
+  if (index < seams.length) {
+    return seams[index]! + overlap / 2
+  }
+  return artworkLength
+}
+
+function buildTilesFromSeams(
   artwork: SizeInches,
   usable: SizeInches,
-  cols: number,
-  rows: number,
+  verticalSeams: number[],
+  horizontalSeams: number[],
   overlap: number,
 ): TileRect[] {
-  const stepX = usable.width - overlap
-  const stepY = usable.height - overlap
+  const cols = verticalSeams.length + 1
+  const rows = horizontalSeams.length + 1
+  const xStarts = axisStarts(verticalSeams, overlap)
+  const yStarts = axisStarts(horizontalSeams, overlap)
   const tiles: TileRect[] = []
 
   for (let row = 0; row < rows; row += 1) {
     for (let col = 0; col < cols; col += 1) {
-      const artX = col * stepX
-      const artY = row * stepY
-      const artWidth = Math.min(usable.width, artwork.width - artX)
-      const artHeight = Math.min(usable.height, artwork.height - artY)
+      const artX = Math.max(0, xStarts[col]!)
+      const artY = Math.max(0, yStarts[row]!)
+      const endX = axisEnd(verticalSeams, col, artwork.width, overlap)
+      const endY = axisEnd(horizontalSeams, row, artwork.height, overlap)
+      const artWidth = Math.max(
+        0,
+        Math.min(usable.width, endX - artX, artwork.width - artX),
+      )
+      const artHeight = Math.max(
+        0,
+        Math.min(usable.height, endY - artY, artwork.height - artY),
+      )
       const pageIndex = row * cols + col
 
       tiles.push({
@@ -53,8 +161,8 @@ function buildTiles(
         label: tileLabel(col, row),
         artX,
         artY,
-        artWidth: Math.max(0, artWidth),
-        artHeight: Math.max(0, artHeight),
+        artWidth,
+        artHeight,
         pageX: 0,
         pageY: 0,
       })
@@ -68,11 +176,34 @@ function orientationOf(paper: SizeInches): PaperOrientation {
   return paper.width >= paper.height ? 'landscape' : 'portrait'
 }
 
+function resolveSeamsForAxis(
+  override: number[] | undefined,
+  tileCount: number,
+  artworkLength: number,
+  usable: number,
+  overlap: number,
+  minTileSize: number,
+): number[] {
+  const auto = autoSeamCenters(tileCount, usable, overlap)
+  if (!override || override.length !== tileCount - 1) {
+    return auto
+  }
+  return clampSeamCenters(
+    override,
+    artworkLength,
+    overlap,
+    minTileSize,
+    usable,
+  )
+}
+
 function layoutForPaper(
   artwork: SizeInches,
   paper: SizeInches,
   margins: TileCalculationInput['margins'],
   overlap: number,
+  seams: SeamOverrides | undefined,
+  minTileSize: number,
 ): TileCalculationResult {
   const usableResult = computeUsableArea(paper, margins)
   if (usableResult.ok === false) {
@@ -100,6 +231,23 @@ function layoutForPaper(
   const unusedPrintableArea =
     pageCount * usableW * usableH - artwork.width * artwork.height
 
+  const verticalSeams = resolveSeamsForAxis(
+    seams?.vertical,
+    cols,
+    artwork.width,
+    usableW,
+    overlap,
+    minTileSize,
+  )
+  const horizontalSeams = resolveSeamsForAxis(
+    seams?.horizontal,
+    rows,
+    artwork.height,
+    usableH,
+    overlap,
+    minTileSize,
+  )
+
   const layout: TileLayout = {
     cols,
     rows,
@@ -111,10 +259,19 @@ function layoutForPaper(
     artwork: { ...artwork },
     coverage,
     unusedPrintableArea,
-    tiles: buildTiles(artwork, { width: usableW, height: usableH }, cols, rows, overlap),
+    verticalSeams,
+    horizontalSeams,
+    tiles: buildTilesFromSeams(
+      artwork,
+      { width: usableW, height: usableH },
+      verticalSeams,
+      horizontalSeams,
+      overlap,
+    ),
   }
 
-  // Sanity: coverage must fully contain artwork (no gaps)
+  // Sanity: coverage must fully contain artwork (no gaps) for auto metric;
+  // seam overrides still require every art point to be covered by some tile.
   if (
     coverage.width + GEOMETRY_EPS < artwork.width ||
     coverage.height + GEOMETRY_EPS < artwork.height
@@ -122,7 +279,37 @@ function layoutForPaper(
     return { ok: false, error: 'Computed coverage does not fully cover artwork' }
   }
 
+  const samplesX = sampleAxis(artwork.width)
+  const samplesY = sampleAxis(artwork.height)
+  for (const x of samplesX) {
+    for (const y of samplesY) {
+      const covered = layout.tiles.some(
+        (t) =>
+          x >= t.artX - GEOMETRY_EPS &&
+          x <= t.artX + t.artWidth + GEOMETRY_EPS &&
+          y >= t.artY - GEOMETRY_EPS &&
+          y <= t.artY + t.artHeight + GEOMETRY_EPS,
+      )
+      if (!covered) {
+        return {
+          ok: false,
+          error: 'Seam overrides leave a gap in artwork coverage',
+        }
+      }
+    }
+  }
+
   return { ok: true, layout }
+}
+
+function sampleAxis(length: number): number[] {
+  if (length <= GEOMETRY_EPS) return [0]
+  const n = 5
+  const out: number[] = []
+  for (let i = 0; i < n; i += 1) {
+    out.push((i / (n - 1)) * Math.max(0, length - 1e-6))
+  }
+  return out
 }
 
 function candidatesForOrientation(
@@ -154,6 +341,10 @@ function candidatesForOrientation(
 export function calculateTiles(input: TileCalculationInput): TileCalculationResult {
   const { artwork, paper, margins, orientation } = input
   const overlap = input.overlap
+  const minTileSize =
+    input.minTileSize !== undefined && Number.isFinite(input.minTileSize)
+      ? Math.max(0, input.minTileSize)
+      : DEFAULT_MIN_TILE_SIZE
 
   if (!isPositiveSize(artwork)) {
     return { ok: false, error: 'Artwork dimensions must be positive' }
@@ -173,7 +364,14 @@ export function calculateTiles(input: TileCalculationInput): TileCalculationResu
   const layouts: TileLayout[] = []
 
   for (const candidate of papers) {
-    const result = layoutForPaper(artwork, candidate, margins, ov)
+    const result = layoutForPaper(
+      artwork,
+      candidate,
+      margins,
+      ov,
+      input.seams,
+      minTileSize,
+    )
     if (!result.ok) {
       // If only one orientation, surface the error; if auto, try the other.
       if (papers.length === 1) return result

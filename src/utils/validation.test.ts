@@ -22,6 +22,7 @@ describe('validation', () => {
       unit: 'in',
       lockAspect: true,
       fitMode: 'FIT',
+      crop: { rect: { x: 0, y: 0, width: 1, height: 1 }, lockToMediaAspect: false },
     })
     expect(issues.some((i) => i.field === 'artwork.width')).toBe(true)
   })
@@ -51,6 +52,7 @@ describe('validation', () => {
         unit: 'in',
         lockAspect: true,
         fitMode: 'FIT',
+        crop: { rect: { x: 0, y: 0, width: 1, height: 1 }, lockToMediaAspect: false },
       },
       paper: {
         presetId: 'letter',

@@ -16,12 +16,22 @@ export {
   validateMargins,
   zeroMargins,
 } from './printGeometry'
-export { calculateTiles, estimatePageCount } from './tileCalculator'
 export {
+  DEFAULT_MIN_TILE_SIZE,
+  autoSeamCenters,
+  calculateTiles,
+  clampSeamCenters,
+  estimatePageCount,
+} from './tileCalculator'
+export {
+  FULL_CROP,
+  cropPixelSize,
+  normalizeCrop,
+  placementForCrop,
   sourceRectForTile,
   sourceXForMirroredArt,
 } from './imageProcessor'
-export type { MirrorAxis } from './imageProcessor'
+export type { MirrorAxis, PlacementRect } from './imageProcessor'
 export {
   PRINT_ACTUAL_SIZE_INSTRUCTIONS,
   buildPdfFilename,

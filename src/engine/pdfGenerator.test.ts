@@ -96,4 +96,94 @@ describe('generatePdf', () => {
     expect(width).toBeCloseTo(612, 5)
     expect(height).toBeCloseTo(792, 5)
   })
+
+  it('PDF page physical size equals transfer material (inches × 72 pt)', async () => {
+    const transfer = { width: 8.5, height: 11 }
+    const finished = { width: 14, height: 17 }
+    const tileResult = calculateTiles({
+      artwork: finished,
+      paper: transfer,
+      margins: zeroMargins(),
+      overlap: 0.25,
+      orientation: 'portrait',
+    })
+    expect(tileResult.ok).toBe(true)
+    if (!tileResult.ok) return
+
+    const { layout } = tileResult
+    // Finished media size preserved in layout
+    expect(layout.artwork.width).toBe(finished.width)
+    expect(layout.artwork.height).toBe(finished.height)
+    // Transfer material drives page size
+    expect(layout.paper.width).toBe(transfer.width)
+    expect(layout.paper.height).toBe(transfer.height)
+
+    const result = await generatePdf({
+      layout,
+      margins: zeroMargins(),
+      mirror: false,
+      marks: {
+        cropMarks: false,
+        registrationMarks: false,
+        tileLabels: false,
+        pageNumbers: false,
+      },
+      imageBytes: TINY_PNG,
+      imageMime: 'image/png',
+      tilePngBytes: layout.tiles.map(() => TINY_PNG),
+      paperPresetId: 'letter',
+    })
+
+    const doc = await PDFDocument.load(result.bytes)
+    for (let i = 0; i < doc.getPageCount(); i += 1) {
+      const { width, height } = doc.getPage(i).getSize()
+      expect(width).toBeCloseTo(transfer.width * 72, 5)
+      expect(height).toBeCloseTo(transfer.height * 72, 5)
+    }
+  })
+
+  it('seam overrides produce the same PDF page size as auto seams', async () => {
+    const base = {
+      artwork: { width: 14, height: 17 },
+      paper: { width: 8.5, height: 11 },
+      margins: zeroMargins(),
+      overlap: 0.25,
+      orientation: 'portrait' as const,
+    }
+    const auto = calculateTiles(base)
+    expect(auto.ok).toBe(true)
+    if (!auto.ok) return
+
+    const overridden = calculateTiles({
+      ...base,
+      seams: {
+        vertical: auto.layout.verticalSeams.map((s) => s - 0.4),
+        horizontal: auto.layout.horizontalSeams.map((s) => s - 0.3),
+      },
+    })
+    expect(overridden.ok).toBe(true)
+    if (!overridden.ok) return
+
+    expect(overridden.layout.artwork).toEqual(auto.layout.artwork)
+    expect(paperSizePoints(overridden.layout)).toEqual(paperSizePoints(auto.layout))
+
+    const result = await generatePdf({
+      layout: overridden.layout,
+      margins: zeroMargins(),
+      mirror: false,
+      marks: {
+        cropMarks: false,
+        registrationMarks: false,
+        tileLabels: false,
+        pageNumbers: false,
+      },
+      imageBytes: TINY_PNG,
+      imageMime: 'image/png',
+      tilePngBytes: overridden.layout.tiles.map(() => TINY_PNG),
+    })
+    const doc = await PDFDocument.load(result.bytes)
+    const { width, height } = doc.getPage(0).getSize()
+    expect(width).toBeCloseTo(8.5 * 72, 5)
+    expect(height).toBeCloseTo(11 * 72, 5)
+  })
 })

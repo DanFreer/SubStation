@@ -5,8 +5,14 @@ import {
   type PDFPage,
   type RGB,
 } from 'pdf-lib'
-import type { MarginsInches, TileLayout, TileRect } from '../types/geometry'
-import { sourceRectForTile } from './imageProcessor'
+import type { FitMode } from '../types'
+import type {
+  CropRectNorm,
+  MarginsInches,
+  TileLayout,
+  TileRect,
+} from '../types/geometry'
+import { FULL_CROP, placementForCrop, sourceRectForTile } from './imageProcessor'
 import { inchesToPdfPoints } from './printGeometry'
 
 export interface PdfMarkOptions {
@@ -30,6 +36,10 @@ export interface GeneratePdfInput {
    */
   tilePngBytes?: Uint8Array[]
   paperPresetId?: string
+  /** Normalized crop on source image (default full). */
+  crop?: CropRectNorm
+  /** How crop maps into finished media (default STRETCH for back-compat). */
+  fitMode?: FitMode
 }
 
 export interface GeneratePdfResult {
@@ -106,6 +116,8 @@ export async function generatePdf(
       mirror,
       imageBytes,
       imageMime,
+      crop: input.crop ?? FULL_CROP,
+      fitMode: input.fitMode ?? 'STRETCH',
     }))
 
   if (tilePngs.length !== layout.tiles.length) {
@@ -299,6 +311,8 @@ async function rasterizeTilesWithCanvas(params: {
   mirror: boolean
   imageBytes: Uint8Array
   imageMime: string
+  crop: CropRectNorm
+  fitMode: FitMode
 }): Promise<Uint8Array[]> {
   if (typeof document === 'undefined') {
     throw new Error(
@@ -313,9 +327,27 @@ async function rasterizeTilesWithCanvas(params: {
   const url = URL.createObjectURL(blob)
   try {
     const img = await loadHtmlImage(url)
+    const placement = placementForCrop({
+      crop: params.crop,
+      imageWidthPx: img.naturalWidth,
+      imageHeightPx: img.naturalHeight,
+      finishedWidthIn: params.layout.artwork.width,
+      finishedHeightIn: params.layout.artwork.height,
+      fitMode: params.fitMode,
+    })
     const results: Uint8Array[] = []
 
     for (const tile of params.layout.tiles) {
+      // Raster at ~150 px/in of tile for export quality; image pixels drive source
+      const outW = Math.max(1, Math.round(tile.artWidth * 150))
+      const outH = Math.max(1, Math.round(tile.artHeight * 150))
+      const canvas = document.createElement('canvas')
+      canvas.width = outW
+      canvas.height = outH
+      const ctx = canvas.getContext('2d')
+      if (!ctx) throw new Error('Could not create canvas context for PDF tiles')
+      ctx.clearRect(0, 0, outW, outH)
+
       const src = sourceRectForTile({
         artX: tile.artX,
         artY: tile.artY,
@@ -323,21 +355,38 @@ async function rasterizeTilesWithCanvas(params: {
         artHeight: tile.artHeight,
         artworkWidth: params.layout.artwork.width,
         mirror: params.mirror,
+        placement,
+        imageWidthPx: img.naturalWidth,
+        imageHeightPx: img.naturalHeight,
       })
-      const pxPerInX = img.naturalWidth / params.layout.artwork.width
-      const pxPerInY = img.naturalHeight / params.layout.artwork.height
-      const sw = Math.max(1, Math.round(src.sw * pxPerInX))
-      const sh = Math.max(1, Math.round(src.sh * pxPerInY))
-      const sx = Math.round(src.sx * pxPerInX)
-      const sy = Math.round(src.sy * pxPerInY)
 
-      const canvas = document.createElement('canvas')
-      canvas.width = sw
-      canvas.height = sh
-      const ctx = canvas.getContext('2d')
-      if (!ctx) throw new Error('Could not create canvas context for PDF tiles')
-      ctx.clearRect(0, 0, sw, sh)
-      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh)
+      // Map finished-art tile rect → destination on canvas; letterbox stays clear
+      const tileLeft = params.mirror
+        ? params.layout.artwork.width - tile.artX - tile.artWidth
+        : tile.artX
+      const tileTop = tile.artY
+      const ix0 = Math.max(tileLeft, placement.dx)
+      const iy0 = Math.max(tileTop, placement.dy)
+      const ix1 = Math.min(tileLeft + tile.artWidth, placement.dx + placement.dw)
+      const iy1 = Math.min(tileTop + tile.artHeight, placement.dy + placement.dh)
+
+      if (ix1 > ix0 && iy1 > iy0) {
+        const dx = ((ix0 - tileLeft) / tile.artWidth) * outW
+        const dy = ((iy0 - tileTop) / tile.artHeight) * outH
+        const dw = ((ix1 - ix0) / tile.artWidth) * outW
+        const dh = ((iy1 - iy0) / tile.artHeight) * outH
+        ctx.drawImage(
+          img,
+          src.sx,
+          src.sy,
+          src.sw,
+          src.sh,
+          dx,
+          dy,
+          dw,
+          dh,
+        )
+      }
 
       const pngBlob = await new Promise<Blob>((resolve, reject) => {
         canvas.toBlob(

@@ -1,13 +1,28 @@
 import { Lock, RotateCcw, Unlock } from 'lucide-react'
-import type { ArtworkSettings, FitMode, LengthUnit } from '../types'
+import type {
+  ArtworkSettings,
+  CropRectNorm,
+  FinishedMediaPresetId,
+  FitMode,
+  LengthUnit,
+} from '../types'
+import { FINISHED_MEDIA_PRESETS } from '../utils/finishedMediaPresets'
+import { CropEditor } from './CropEditor'
 
 interface ArtworkSettingsPanelProps {
   settings: ArtworkSettings
+  imageUrl: string | null
+  imageWidthPx: number
+  imageHeightPx: number
   onWidth: (value: number) => void
   onHeight: (value: number) => void
   onUnit: (unit: LengthUnit) => void
   onLockAspect: (lock: boolean) => void
   onFitMode: (mode: FitMode) => void
+  onPreset: (id: FinishedMediaPresetId) => void
+  onCropRect: (rect: CropRectNorm) => void
+  onCropLockToMedia: (lock: boolean) => void
+  onResetCrop: () => void
   onPortrait: () => void
   onLandscape: () => void
   onReset: () => void
@@ -18,21 +33,38 @@ const FIT_MODES: FitMode[] = ['FIT', 'FILL', 'STRETCH']
 
 export function ArtworkSettingsPanel({
   settings,
+  imageUrl,
+  imageWidthPx,
+  imageHeightPx,
   onWidth,
   onHeight,
   onUnit,
   onLockAspect,
   onFitMode,
+  onPreset,
+  onCropRect,
+  onCropLockToMedia,
+  onResetCrop,
   onPortrait,
   onLandscape,
   onReset,
 }: ArtworkSettingsPanelProps) {
+  const mediaAspect =
+    settings.width > 0 && settings.height > 0
+      ? settings.width / settings.height
+      : 1
+
   return (
     <section className="space-y-3">
       <header className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold tracking-wide text-[var(--text)]">
-          Artwork size
-        </h2>
+        <div>
+          <h2 className="text-sm font-semibold tracking-wide text-[var(--text)]">
+            Finished media
+          </h2>
+          <p className="text-[10px] text-[var(--muted)]">
+            Physical product size · crop from artwork
+          </p>
+        </div>
         <button
           type="button"
           onClick={onReset}
@@ -42,6 +74,22 @@ export function ArtworkSettingsPanel({
           Reset
         </button>
       </header>
+
+      <label className="block space-y-1 text-xs text-[var(--muted)]">
+        Preset
+        <select
+          value={settings.presetId ?? 'custom'}
+          onChange={(e) => onPreset(e.target.value as FinishedMediaPresetId)}
+          className="block w-full rounded-md border border-[var(--border)] bg-white px-2 py-1.5 text-sm text-[var(--text)]"
+        >
+          {FINISHED_MEDIA_PRESETS.map((preset) => (
+            <option key={preset.id} value={preset.id}>
+              {preset.label}
+            </option>
+          ))}
+          <option value="custom">Custom</option>
+        </select>
+      </label>
 
       <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
         <label className="space-y-1 text-xs text-[var(--muted)]">
@@ -115,7 +163,7 @@ export function ArtworkSettingsPanel({
       </div>
 
       <label className="block space-y-1 text-xs text-[var(--muted)]">
-        Placement (Stage 3)
+        Placement (crop → finished media)
         <select
           value={settings.fitMode}
           onChange={(e) => onFitMode(e.target.value as FitMode)}
@@ -128,6 +176,39 @@ export function ArtworkSettingsPanel({
           ))}
         </select>
       </label>
+
+      {imageUrl && (
+        <div className="space-y-2 border-t border-[var(--border)] pt-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-medium text-[var(--text)]">Artwork crop</p>
+            <button
+              type="button"
+              onClick={onResetCrop}
+              className="text-[10px] text-[var(--muted)] hover:text-[var(--accent)]"
+            >
+              Reset crop
+            </button>
+          </div>
+          <label className="flex items-center gap-2 text-[11px] text-[var(--muted)]">
+            <input
+              type="checkbox"
+              checked={settings.crop.lockToMediaAspect}
+              onChange={(e) => onCropLockToMedia(e.target.checked)}
+              className="rounded border-[var(--border)]"
+            />
+            Lock crop aspect to finished media
+          </label>
+          <CropEditor
+            imageUrl={imageUrl}
+            imageWidthPx={imageWidthPx}
+            imageHeightPx={imageHeightPx}
+            crop={settings.crop.rect}
+            onChange={onCropRect}
+            lockToMediaAspect={settings.crop.lockToMediaAspect}
+            mediaAspect={mediaAspect}
+          />
+        </div>
+      )}
     </section>
   )
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { coverageAlongAxis, nearlyEqual, zeroMargins } from './printGeometry'
-import { calculateTiles } from './tileCalculator'
+import { calculateTiles, clampSeamCenters } from './tileCalculator'
 
 const letter = { width: 8.5, height: 11 }
 const tabloid = { width: 11, height: 17 }
@@ -284,5 +284,76 @@ describe('tileCalculator — boundaries', () => {
     expect(portraitOnly.ok).toBe(true)
     if (!portraitOnly.ok) return
     expect(result.layout.pageCount).toBeLessThanOrEqual(portraitOnly.layout.pageCount)
+  })
+})
+
+describe('tileCalculator — seam overrides (Stage 7)', () => {
+  it('auto layout exposes seam centers with overlap centered', () => {
+    const result = calculateTiles({
+      artwork: { width: 14, height: 17 },
+      paper: letter,
+      margins: zeroMargins(),
+      overlap: 0.25,
+      orientation: 'portrait',
+    })
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const { layout } = result
+    expect(layout.verticalSeams).toHaveLength(layout.cols - 1)
+    expect(layout.horizontalSeams).toHaveLength(layout.rows - 1)
+
+    const seam = layout.verticalSeams[0]!
+    const left = layout.tiles.find((t) => t.col === 0 && t.row === 0)!
+    const right = layout.tiles.find((t) => t.col === 1 && t.row === 0)!
+    // Overlap centered on seam: left ends at seam+O/2, right starts at seam−O/2
+    expect(left.artX + left.artWidth).toBeCloseTo(seam + layout.overlap / 2, 6)
+    expect(right.artX).toBeCloseTo(seam - layout.overlap / 2, 6)
+  })
+
+  it('accepts vertical seam overrides and keeps finished media size', () => {
+    const auto = calculateTiles({
+      artwork: { width: 14, height: 17 },
+      paper: letter,
+      margins: zeroMargins(),
+      overlap: 0.25,
+      orientation: 'portrait',
+    })
+    expect(auto.ok).toBe(true)
+    if (!auto.ok) return
+
+    // Shift left within the coverable band (auto seam ≈ 8.375; floor ≈ 5.625)
+    const shifted = auto.layout.verticalSeams.map((s) => s - 0.75)
+    const result = calculateTiles({
+      artwork: { width: 14, height: 17 },
+      paper: letter,
+      margins: zeroMargins(),
+      overlap: 0.25,
+      orientation: 'portrait',
+      seams: {
+        vertical: shifted,
+        horizontal: auto.layout.horizontalSeams,
+      },
+    })
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.layout.artwork.width).toBe(14)
+    expect(result.layout.artwork.height).toBe(17)
+    expect(result.layout.pageCount).toBe(auto.layout.pageCount)
+    expect(result.layout.verticalSeams[0]).toBeLessThan(
+      auto.layout.verticalSeams[0]! - 0.2,
+    )
+
+    const seam = result.layout.verticalSeams[0]!
+    const left = result.layout.tiles.find((t) => t.col === 0)!
+    const right = result.layout.tiles.find((t) => t.col === 1)!
+    expect(left.artX + left.artWidth).toBeCloseTo(seam + 0.125, 5)
+    expect(right.artX).toBeCloseTo(seam - 0.125, 5)
+  })
+
+  it('clamps seams to min tile size and usable coverage', () => {
+    const clamped = clampSeamCenters([0.1], 14, 0.25, 0.5, 8.5)
+    // Must stay within [art−usable+O/2, usable−O/2] = [5.625, 8.375]
+    expect(clamped[0]!).toBeGreaterThanOrEqual(5.625 - 1e-9)
+    expect(clamped[0]!).toBeLessThanOrEqual(8.375 + 1e-9)
   })
 })

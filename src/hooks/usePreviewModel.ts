@@ -1,9 +1,11 @@
 import { useMemo } from 'react'
 import { calculateTiles, toInches } from '../engine'
+import { cropPixelSize, normalizeCrop } from '../engine/imageProcessor'
 import { calculateResolution } from '../engine/resolutionCalculator'
 import type {
   ArtworkSettings,
   PaperSettings,
+  SeamOverrides,
   TileCalculationResult,
   UploadedImage,
 } from '../types'
@@ -15,6 +17,7 @@ export interface PreviewModelInput {
   artwork: ArtworkSettings
   paper: PaperSettings
   print: PrintSettings
+  seams?: SeamOverrides | null
 }
 
 function marginsToInches(
@@ -37,6 +40,7 @@ export function usePreviewModel(input: PreviewModelInput) {
   const artwork = useDebouncedValue(input.artwork, 150)
   const paper = useDebouncedValue(input.paper, 150)
   const print = useDebouncedValue(input.print, 150)
+  const seams = useDebouncedValue(input.seams ?? null, 80)
   const image = input.image
 
   return useMemo(() => {
@@ -46,6 +50,7 @@ export function usePreviewModel(input: PreviewModelInput) {
     const paperH = toInches(paper.height, paper.unit)
     const margins = marginsToInches(print.margins, print.unit)
     const overlap = toInches(print.overlap, print.unit)
+    const crop = normalizeCrop(artwork.crop?.rect)
 
     let tileResult: TileCalculationResult | null = null
     if (artW > 0 && artH > 0 && paperW > 0 && paperH > 0) {
@@ -56,14 +61,20 @@ export function usePreviewModel(input: PreviewModelInput) {
         overlap,
         orientation: print.orientationPreference,
         mirror: print.mirror,
+        seams: seams ?? undefined,
       })
     }
 
-    const resolution =
+    const cropPx =
       image && artW > 0 && artH > 0
+        ? cropPixelSize(crop, image.widthPx, image.heightPx)
+        : null
+
+    const resolution =
+      cropPx && artW > 0 && artH > 0
         ? calculateResolution({
-            widthPx: image.widthPx,
-            heightPx: image.heightPx,
+            widthPx: cropPx.widthPx,
+            heightPx: cropPx.heightPx,
             widthIn: artW,
             heightIn: artH,
           })
@@ -77,11 +88,18 @@ export function usePreviewModel(input: PreviewModelInput) {
       margins,
       overlap,
       mirror: print.mirror,
+      crop,
+      fitMode: artwork.fitMode,
       tileResult,
       resolution,
       artwork,
       paper,
       image,
+      /** PDF page size in points (transfer material × 72). */
+      pdfPagePoints:
+        paperW > 0 && paperH > 0
+          ? { width: paperW * 72, height: paperH * 72 }
+          : null,
     }
-  }, [artwork, paper, print, image])
+  }, [artwork, paper, print, image, seams])
 }
